@@ -7,6 +7,8 @@ import (
     "math/rand"
 )
 
+const N = 1000000
+
 // Test cases from "sort" standard package
 var ints = []int{74, 59, 238, -784, 9845, 959, 905, 0, 0, 42, 7586, -5467984, 7586}
 var float64s = []float64{74.3, 59.0, math.Inf(1), 238.2, -784.0, 2.3, math.NaN(), math.NaN(), math.Inf(-1), 9845.768, -959.7485, 905, 7.8, 7.8}
@@ -40,7 +42,7 @@ func TestStrings (t *testing.T) {
 }
 
 func TestLargeInput (t *testing.T) {
-    data := sort.IntSlice(rand.Perm(1000000)) //million
+    data := sort.IntSlice(rand.Perm(N)) //million
     QuickSort(data)
     if !sort.IsSorted(data) {
         t.Error("Million integers")
@@ -59,7 +61,7 @@ func TestEmpty (t *testing.T) {
 func BenchmarkInt1M (b *testing.B) {
     b.StopTimer()
     for i := 0; i < b.N; i++ {
-        data := sort.IntSlice(rand.Perm(1000000))
+        data := sort.IntSlice(rand.Perm(N))
         b.StartTimer()
         QuickSort(data)
         b.StopTimer()
@@ -69,8 +71,8 @@ func BenchmarkInt1M (b *testing.B) {
 func BenchmarkInt1MSorted (b *testing.B) {
     b.StopTimer()
     for i := 0; i < b.N; i++ {
-        s := make([]int, 1000000)
-        for j := 0; j < 1000000; j++ {
+        s := make([]int, N)
+        for j := 0; j < N; j++ {
             s[j] = j
         }
         data := sort.IntSlice(s)
@@ -83,9 +85,9 @@ func BenchmarkInt1MSorted (b *testing.B) {
 func BenchmarkInt1MReverse (b *testing.B) {
     b.StopTimer()
     for i := 0; i < b.N; i++ {
-        s := make([]int, 1000000)
-        for j := 0; j < 1000000; j++ {
-            s[j] = 1000000 - j
+        s := make([]int, N)
+        for j := 0; j < N; j++ {
+            s[j] = N - j
         }
         data := sort.IntSlice(s)
         b.StartTimer()
@@ -97,9 +99,9 @@ func BenchmarkInt1MReverse (b *testing.B) {
 func BenchmarkInt1KDuplicates (b *testing.B) {
     b.StopTimer()
     for i := 0; i < b.N; i++ {
-        s := make([]int, 1000)
-        for j := 0; j < 1000; j++ {
-            s[j] = rand.Intn(10)
+        s := make([]int, N)
+        for j := 0; j < N; j++ {
+            s[j] = rand.Intn(100)
         }
         data := sort.IntSlice(s)
         b.StartTimer()

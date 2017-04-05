@@ -6,30 +6,26 @@ package quicksort
 import (
     "sort" //we will use sort.Interface for our sort
     "math/rand"
-    "runtime"
+    "sync"
 )
+
+var wg sync.WaitGroup
 
 // Exported package interface
 func QuickSort (data sort.Interface) {
     shuffle(data)
-    var depth int //this determines the depth of recursion where new goroutines will be created for subsorts
-    for i := runtime.NumCPU(); i > 1; i >>= 1 {depth++} //take log2 of number of cores to create appropriate number of goroutines
-    if depth == 0 {
-        quickSort(data, 0, data.Len() - 1, depth, nil)
-    } else {
-        done := make(chan bool)
-        go quickSort(data, 0, data.Len() - 1, depth, done)
-        <-done
-    }
+    wg.Add(1)
+    quickSort(data, 0, data.Len() - 1)
+    wg.Wait()
 }
 
 // Recursive concurrent 3-way quicksort
-func quickSort (data sort.Interface, lo , hi int, depth int, done chan bool) {
+func quickSort (data sort.Interface, lo , hi int) {
 
     // Cutting off to insertion sort as it is more efficient for small arrays
     if hi - lo < 7 {
         insertionSort(data, lo, hi)
-        if done != nil {done <- true}
+        wg.Done()
         return
     }
 
@@ -49,19 +45,11 @@ func quickSort (data sort.Interface, lo , hi int, depth int, done chan bool) {
         }
     }
 
-    // Deciding whether to run subsorts concurrently in goroutines based on the value of depth argument
-    if depth == 0 {
-        quickSort(data, lo, lt - 1, 0, nil)
-        quickSort(data, gt + 1, hi, 0, nil)
-    } else {
-        depth--
-        childdone := make(chan bool)
-        go quickSort(data, lo, lt - 1, depth, childdone)
-        go quickSort(data, gt + 1, hi, depth, childdone)
-        <-childdone
-        <-childdone
-    }
-    if done != nil {done <- true}
+    wg.Add(1)
+    go quickSort(data, lo, lt - 1)
+    wg.Add(1)
+    go quickSort(data, gt + 1, hi)
+    wg.Done()
 }
 
 // For small subarrays

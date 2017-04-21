@@ -16,7 +16,7 @@ var strings = []string{"", "Hello", "foo", "bar", "foo", "f00", "%*&^*&^&", "***
 
 func TestInts (t *testing.T) {
     data := sort.IntSlice(ints)
-    QuickSort(data)
+    QuickSort(data, 5)
     if !sort.IsSorted(data) {
         t.Errorf("sorted %v", ints)
         t.Errorf("   got %v", data)
@@ -25,7 +25,7 @@ func TestInts (t *testing.T) {
 
 func TestFloat64s (t *testing.T) {
     data := sort.Float64Slice(float64s)
-    QuickSort(data)
+    QuickSort(data, 20)
     if !sort.IsSorted(data) {
         t.Errorf("sorted %v", float64s)
         t.Errorf("   got %v", data)
@@ -34,7 +34,7 @@ func TestFloat64s (t *testing.T) {
 
 func TestStrings (t *testing.T) {
     data := sort.StringSlice(strings)
-    QuickSort(data)
+    QuickSort(data, 1)
     if !sort.IsSorted(data) {
         t.Errorf("sorted %v", strings)
         t.Errorf("   got %v", data)
@@ -43,7 +43,7 @@ func TestStrings (t *testing.T) {
 
 func TestLargeInput (t *testing.T) {
     data := sort.IntSlice(rand.Perm(N)) //million
-    QuickSort(data)
+    QuickSort(data, 100)
     if !sort.IsSorted(data) {
         t.Error("Million integers")
     }
@@ -63,7 +63,7 @@ func BenchmarkInt1M (b *testing.B) {
     for i := 0; i < b.N; i++ {
         data := sort.IntSlice(rand.Perm(N))
         b.StartTimer()
-        QuickSort(data)
+        QuickSort(data, 3)
         b.StopTimer()
     }
 }
@@ -77,7 +77,7 @@ func BenchmarkInt1MSorted (b *testing.B) {
         }
         data := sort.IntSlice(s)
         b.StartTimer()
-        QuickSort(data)
+        QuickSort(data, 4)
         b.StopTimer()
     }
 }
@@ -91,7 +91,7 @@ func BenchmarkInt1MReverse (b *testing.B) {
         }
         data := sort.IntSlice(s)
         b.StartTimer()
-        QuickSort(data)
+        QuickSort(data, 5)
         b.StopTimer()
     }
 }
@@ -105,7 +105,7 @@ func BenchmarkInt1KDuplicates (b *testing.B) {
         }
         data := sort.IntSlice(s)
         b.StartTimer()
-        QuickSort(data)
+        QuickSort(data, 6)
         b.StopTimer()
     }
 }

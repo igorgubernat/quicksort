@@ -7,48 +7,84 @@ import (
     "sort" //we will use sort.Interface for our sort
     "math/rand"
     "sync"
+    //"fmt"
 )
 
+type Srt struct {
+    Data sort.Interface
+    Start int
+    End int
+}
+
 var wg sync.WaitGroup
+var doneSoFar int
+var closed bool
 
 // Exported package interface
-func QuickSort (data sort.Interface) {
+func QuickSort (data sort.Interface, goroutines int) {
     shuffle(data)
-    wg.Add(1)
-    quickSort(data, 0, data.Len() - 1)
+    sorts := make(chan Srt, 100)
+    for i := 1; i <= goroutines; i++ {
+        wg.Add(1)
+        go quickSort(sorts)
+    }
+    sorts <- Srt{data, 0, data.Len() - 1}
     wg.Wait()
 }
 
 // Recursive concurrent 3-way quicksort
-func quickSort (data sort.Interface, lo , hi int) {
+func quickSort (sorts chan Srt) {
 
-    // Cutting off to insertion sort as it is more efficient for small arrays
-    if hi - lo < 7 {
-        insertionSort(data, lo, hi)
-        wg.Done()
-        return
-    }
+    for s := range sorts {
 
-    // 3-way quicksort logic
-    lt, gt := lo, hi
-    i := lo
-    for i <= gt {
-        if data.Less(i, lt) {
-            data.Swap(lt, i)
-            i++
-            lt++
-        } else if data.Less(lt, i) {
-            data.Swap(i, gt)
-            gt--
-        } else {
-            i++
+        data := s.Data
+        lo := s.Start
+        hi := s.End
+
+        // Cutting off to insertion sort as it is more efficient for small arrays
+        if hi - lo < 7 {
+            insertionSort(data, lo, hi)
+            doneSoFar += hi - lo + 1
+            //fmt.Println("Done so far: ", doneSoFar)
+            if doneSoFar == data.Len() && !closed {
+                close(sorts)
+                closed = true
+            }
+            continue
         }
+
+        // 3-way quicksort logic
+        lt, gt := lo, hi
+        i := lo
+        for i <= gt {
+            if data.Less(i, lt) {
+                data.Swap(lt, i)
+                i++
+                lt++
+            } else if data.Less(lt, i) {
+                data.Swap(i, gt)
+                gt--
+            } else {
+                i++
+            }
+        }
+
+        doneSoFar += gt - lt + 1
+        //fmt.Println("Done so far: ", doneSoFar)
+        if doneSoFar == data.Len() && !closed {
+            close(sorts)
+            closed = true
+            continue
+        }
+
+        go func () {
+            if !closed {
+                sorts <- Srt{data, lo, lt - 1}
+                sorts <- Srt{data, gt + 1, hi}
+            }
+        }()
     }
 
-    wg.Add(1)
-    go quickSort(data, lo, lt - 1)
-    wg.Add(1)
-    go quickSort(data, gt + 1, hi)
     wg.Done()
 }
 

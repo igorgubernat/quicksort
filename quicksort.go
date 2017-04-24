@@ -7,9 +7,11 @@ import (
     "sort" //we will use sort.Interface for our sort
     "math/rand"
     "sync"
-    //"fmt"
+   // "fmt"
 )
 
+// This is the abstraction for sorting job. Since each sort is independent of others, I've
+// decided to try using goroutines and channels instead of recursion.
 type Srt struct {
     Data sort.Interface
     Start int
@@ -17,23 +19,25 @@ type Srt struct {
 }
 
 var wg sync.WaitGroup
-var doneSoFar int
-var closed bool
 
 // Exported package interface
 func QuickSort (data sort.Interface, goroutines int) {
     shuffle(data)
     sorts := make(chan Srt, 100)
+    done := make(chan int, 100)
+    go sortCloser(sorts, done, data.Len())
     for i := 1; i <= goroutines; i++ {
         wg.Add(1)
-        go quickSort(sorts)
+        go quickSort(sorts, done)
     }
     sorts <- Srt{data, 0, data.Len() - 1}
     wg.Wait()
 }
 
 // Recursive concurrent 3-way quicksort
-func quickSort (sorts chan Srt) {
+// Goroutine takes sorting job from sorts channel, sorts it if the size is less then 12 or
+// partitions and puts two subsorts into sorts channel.
+func quickSort (sorts chan Srt, done chan int) {
 
     for s := range sorts {
 
@@ -42,14 +46,9 @@ func quickSort (sorts chan Srt) {
         hi := s.End
 
         // Cutting off to insertion sort as it is more efficient for small arrays
-        if hi - lo < 7 {
+        if hi - lo < 12 {
             insertionSort(data, lo, hi)
-            doneSoFar += hi - lo + 1
-            //fmt.Println("Done so far: ", doneSoFar)
-            if doneSoFar == data.Len() && !closed {
-                close(sorts)
-                closed = true
-            }
+            done <- hi - lo + 1
             continue
         }
 
@@ -69,20 +68,10 @@ func quickSort (sorts chan Srt) {
             }
         }
 
-        doneSoFar += gt - lt + 1
-        //fmt.Println("Done so far: ", doneSoFar)
-        if doneSoFar == data.Len() && !closed {
-            close(sorts)
-            closed = true
-            continue
-        }
+        done <- gt - lt + 1
 
-        go func () {
-            if !closed {
-                sorts <- Srt{data, lo, lt - 1}
-                sorts <- Srt{data, gt + 1, hi}
-            }
-        }()
+        if lo <= lt - 1 {go func () {sorts <- Srt{data, lo, lt - 1}}()}
+        if gt + 1 <= hi {go func () {sorts <- Srt{data, gt + 1, hi}}()}
     }
 
     wg.Done()
@@ -107,5 +96,18 @@ func shuffle (data sort.Interface) {
     for i := 0; i < N; i++ {
         r := rand.Intn(i + 1)
         data.Swap(r, i)
+    }
+}
+
+// This goroutine counts number of elements that are already sorted and
+// when it is equal to the length of entire slice, closes the sorts channel.
+func sortCloser (sorts chan Srt, done chan int, length int) {
+    var sum int
+    for s := range done {
+        sum += s
+        if sum == length {
+            close(sorts)
+            close(done)
+        }
     }
 }
